@@ -31,6 +31,7 @@ func (g *grace) reload() *grace {
 		g.err = err
 		return g
 	}
+	defer f.Close()
 
 	var args []string
 	if len(os.Args) > 1 {
