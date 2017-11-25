@@ -56,15 +56,6 @@ func (g *grace) stop(ctx context.Context) *grace {
 	return g
 }
 
-func contains(a []string, s string) bool {
-	for _, v := range a {
-		if v == s {
-			return true
-		}
-	}
-	return false
-}
-
 func (g *grace) run() (err error) {
 	if _, ok := syscall.Getenv(strings.Split(graceEnv, "=")[0]); ok {
 		f := os.NewFile(3, "")
