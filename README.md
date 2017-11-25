@@ -13,7 +13,7 @@ https://github.com/douglarek/zerodown/blob/master/zerodowndemo/server.go
 
 1. Install the demo application
 
-        go get github.com/douglarek/zerodowndemo
+        go get github.com/douglarek/zerodown/zerodowndemo
 
 2. Start it in the first terminal
 
