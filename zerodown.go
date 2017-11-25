@@ -88,11 +88,7 @@ func (g *grace) run() (err error) {
 	for {
 		select {
 		case s := <-quit:
-			timeout := time.Duration(int64(g.srv.ReadTimeout) + int64(g.srv.WriteTimeout))
-			if timeout == 0 {
-				timeout = waitTimeout
-			}
-			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+			ctx, cancel := context.WithTimeout(context.Background(), waitTimeout)
 			defer cancel()
 			switch s {
 			case syscall.SIGINT, syscall.SIGTERM:
