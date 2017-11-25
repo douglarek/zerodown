@@ -9,13 +9,14 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 )
 
 const (
-	graceful    = "-graceful"
-	waitTimeout = 20 * time.Second // default timeout is 20s
+	waitTimeout = 20 * time.Second                    // default timeout is 20s
+	graceEnv    = "ZEROXVLBZGBAICMRAJWWHTHCDOWN=true" // env flag for reload
 )
 
 type grace struct {
@@ -31,13 +32,14 @@ func (g *grace) reload() *grace {
 		return g
 	}
 
-	args := os.Args
-	if !contains(args, graceful) {
-		args = append(args, graceful)
+	var args []string
+	if len(os.Args) > 1 {
+		args = append(args, os.Args[1:]...)
 	}
-	cmd := exec.Command(args[0], args[1:]...)
+	cmd := exec.Command(os.Args[0], args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	cmd.Env = append(os.Environ(), graceEnv)
 	cmd.ExtraFiles = []*os.File{f}
 
 	g.err = cmd.Start()
@@ -64,7 +66,7 @@ func contains(a []string, s string) bool {
 }
 
 func (g *grace) run() (err error) {
-	if contains(os.Args, graceful) {
+	if _, ok := syscall.Getenv(strings.Split(graceEnv, "=")[0]); ok {
 		f := os.NewFile(3, "")
 		if g.listener, err = net.FileListener(f); err != nil {
 			return
