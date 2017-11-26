@@ -54,10 +54,14 @@ func (g *grace) reload() *grace {
 	return g
 }
 
-func (g *grace) stop(ctx context.Context) *grace {
+func (g *grace) stop() *grace {
 	if g.err != nil {
 		return g
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), g.timeout)
+	defer cancel()
+
 	if err := g.srv.Shutdown(ctx); err != nil {
 		g.err = err
 	}
@@ -89,14 +93,12 @@ func (g *grace) run() (err error) {
 	for {
 		select {
 		case s := <-quit:
-			ctx, cancel := context.WithTimeout(context.Background(), g.timeout)
-			defer cancel()
 			switch s {
 			case syscall.SIGINT, syscall.SIGTERM:
 				signal.Stop(quit)
-				return g.stop(ctx).err
+				return g.stop().err
 			case syscall.SIGUSR2:
-				return g.reload().stop(ctx).err
+				return g.reload().stop().err
 			}
 		case err = <-terminate:
 			return
