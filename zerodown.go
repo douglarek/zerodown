@@ -15,13 +15,20 @@ import (
 )
 
 const (
-	waitTimeout = 20 * time.Second                    // default timeout is 20s
-	graceEnv    = "ZEROXVLBZGBAICMRAJWWHTHCDOWN=true" // env flag for reload
+	defaultTimeout = 20 * time.Second                    // default timeout is 20s
+	graceEnv       = "ZEROXVLBZGBAICMRAJWWHTHCDOWN=true" // env flag for reload
 )
+
+// A Grace carries actions for graceful restart or shutdown.
+type Grace interface {
+	Run(*http.Server) error
+	ListenAndServe(string, http.Handler) error
+}
 
 type grace struct {
 	srv      *http.Server
 	listener net.Listener
+	timeout  time.Duration
 	err      error
 }
 
@@ -82,7 +89,7 @@ func (g *grace) run() (err error) {
 	for {
 		select {
 		case s := <-quit:
-			ctx, cancel := context.WithTimeout(context.Background(), waitTimeout)
+			ctx, cancel := context.WithTimeout(context.Background(), g.timeout)
 			defer cancel()
 			switch s {
 			case syscall.SIGINT, syscall.SIGTERM:
@@ -97,13 +104,29 @@ func (g *grace) run() (err error) {
 	}
 }
 
+// WithTimeout returns a custom timeout Grace.
+func WithTimeout(timeout time.Duration) Grace {
+	return &grace{timeout: timeout}
+}
+
+func (g *grace) Run(srv *http.Server) error {
+	g.srv = srv
+	return g.run()
+}
+
+func (g *grace) ListenAndServe(addr string, handler http.Handler) error {
+	g.srv = &http.Server{Addr: addr, Handler: handler}
+	return g.run()
+}
+
+var _ Grace = (*grace)(nil) // assert *grace implements Grace.
+
 // Run accepts a custom http Server and provice signal magic.
 func Run(srv *http.Server) error {
-	return (&grace{srv: srv}).run()
+	return WithTimeout(defaultTimeout).Run(srv)
 }
 
 // ListenAndServe wraps http.ListenAndServe and provides signal magic.
 func ListenAndServe(addr string, handler http.Handler) error {
-	server := &http.Server{Addr: addr, Handler: handler}
-	return (&grace{srv: server}).run()
+	return WithTimeout(defaultTimeout).ListenAndServe(addr, handler)
 }
